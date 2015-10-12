@@ -5,39 +5,66 @@ module Spree
     index_name Spree::ElasticsearchSettings.index
     document_type 'spree_product'
 
-    mapping _all: {"index_analyzer" => "search_analyzer", "search_analyzer" => "whitespace_analyzer"} do
+    mapping _all: {'index_analyzer' => 'search_analyzer', 'search_analyzer' => 'whitespace_analyzer'} do
       indexes :name, type: 'multi_field' do
-        indexes :name, type: 'string', analyzer: 'search_analyzer', boost: 100
+        indexes :name,         type: 'string', analyzer: 'search_analyzer', boost: 100
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer', boost: 100
-        indexes :untouched, type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
       end
       indexes :description, analyzer: 'snowball'
-      indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :price, type: 'double'
-      indexes :discount_rate, type: 'integer'
       indexes :sku, type: 'string', index: 'not_analyzed'
       indexes :taxon_ids, type: 'string', index: 'not_analyzed'
-      indexes :image_url, type: 'string', index: 'not_analyzed', include_in_all: false
-      indexes :tags, type: 'string', index: 'not_analyzed'
 
-      # TODO: make properties top level?
-      indexes :properties, type: 'object', index: 'not_analyzed' do
-        indexes :merchant, type: 'string', index: 'not_analyzed'
-        indexes :brand, type: 'string', index: 'not_analyzed'
-        indexes :color, type: 'string', index: 'not_analyzed'
-        # .. other fields will be dynamically indexed
+      indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
+      indexes :published,    type: 'bool', index: 'not_analyzed', include_in_all: false
+
+      indexes :release_formats, type: 'nested' do
+        indexes :id, type: 'integer', index: 'not_analyzed'
+        indexes :release_date, type: 'date', format: 'dateOptionalTime', include_in_all: false
+
+        indexes :format, type: 'string', index: 'not_analyzed'
+        indexes :uber_format, type: 'string', index: 'not_analyzed'
+
+        indexes :preorderable, type: 'bool', index: 'not_analyzed'
+        indexes :in_stock,     type: 'bool', index: 'not_analyzed'
+        indexes :published,    type: 'bool', index: 'not_analyzed'
       end
+
+      # artists
+      indexes :artists, type: 'multi_field' do
+        indexes :artists,      type: 'string', analyzer: 'search_analyzer'
+        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
+        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+      # genres
+      indexes :genres, type: 'multi_field' do
+        indexes :genres,       type: 'string', analyzer: 'search_analyzer'
+        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
+        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+      # label
+      indexes :label, type: 'multi_field' do
+        indexes :label,        type: 'string', analyzer: 'search_analyzer'
+        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
+        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+      # supplier
+      indexes :supplier, type: 'multi_field' do
+        indexes :supplier,     type: 'string', analyzer: 'search_analyzer'
+        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
+        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+
       indexes :created_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :deleted_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
-      indexes :out_of_date_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
-      indexes :popularity_score, type: 'integer'
-      indexes :trending_score, type: 'integer'
     end
 
-    def as_indexed_json(options={})
+    def as_indexed_json(options = {})
       result = as_json({
-        methods: [:price, :sku, :discount_rate],
-        only: [:available_on, :description, :name, :tags, :out_of_date_at, :created_at, :deleted_at, :popularity_score, :trending_score],
+        methods: [:price, :sku,
+                  :artists, :genres, :label, :supplier],
+        only: [:available_on, :description, :name, :created_at, :deleted_at],
         include: {
           variants: {
             only: [:sku],
@@ -49,7 +76,6 @@ module Spree
           }
         }
       })
-      result[:properties] = Hash[product_properties.map{ |pp| [pp.property.name, pp.value] }]
       result[:taxon_ids] = taxons.map(&:self_and_ancestors).flatten.uniq.map(&:id) unless taxons.empty?
       result[:image_url] = images.first.attachment.url unless images.empty?
       result
@@ -61,10 +87,6 @@ module Spree
 
       attribute :price_min, Float
       attribute :price_max, Float
-      attribute :discount_min, Integer
-      attribute :discount_max, Integer
-      attribute :properties, Hash, default: {}
-      attribute :tags, Array, default: []
       attribute :query, String
       attribute :taxons, Array
       attribute :browse_mode, Boolean
@@ -150,26 +172,17 @@ module Spree
         # taxon and property filters have an effect on the facets
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
 
-        # tag search
-        and_filter << { terms: { tags: @tags } } unless @tags.empty?
-
         # filter by price
         price = {}
         price[:gte] = price_min if !price_min.nil? && price_min > 0
         price[:lte] = price_max if !price_max.nil? && price_max > 0
         and_filter << { range: { price: price } } unless price.empty?
-        # filter by discount_rate
-        discount = {}
-        discount[:gte] = discount_min if !discount_min.nil? && discount_min > 0
-        discount[:lte] = discount_max if !discount_max.nil? && discount_max > 0
-        and_filter << { range: { discount_rate: discount } } unless discount.empty?
 
         # only return products that are available
         and_filter << { range: { available_on: { lte: "now" } } }
-        and_filter << { missing: { field: :out_of_date_at } }
         and_filter << { missing: { field: :deleted_at } }
         # and have an image
-        and_filter << { exists: { field: :image_url } }
+        #and_filter << { exists: { field: :image_url } }
         result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
 
         result
