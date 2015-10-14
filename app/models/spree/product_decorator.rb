@@ -17,7 +17,7 @@ module Spree
       indexes :taxon_ids, type: 'string', index: 'not_analyzed'
 
       indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
-      indexes :published,    type: 'bool', index: 'not_analyzed', include_in_all: false
+      indexes :published,    type: 'boolean', index: 'not_analyzed', include_in_all: false
 
       indexes :release_formats, type: 'nested' do
         indexes :id, type: 'integer', index: 'not_analyzed'
@@ -26,9 +26,9 @@ module Spree
         indexes :format, type: 'string', index: 'not_analyzed'
         indexes :uber_format, type: 'string', index: 'not_analyzed'
 
-        indexes :preorderable, type: 'bool', index: 'not_analyzed'
-        indexes :in_stock,     type: 'bool', index: 'not_analyzed'
-        indexes :published,    type: 'bool', index: 'not_analyzed'
+        indexes :preorderable, type: 'boolean', index: 'not_analyzed'
+        indexes :in_stock,     type: 'boolean', index: 'not_analyzed'
+        indexes :published,    type: 'boolean', index: 'not_analyzed'
       end
 
       # artists
@@ -62,22 +62,21 @@ module Spree
 
     def as_indexed_json(options = {})
       result = as_json({
-        methods: [:price, :sku,
-                  :artists, :genres, :label, :supplier],
-        only: [:available_on, :description, :name, :created_at, :deleted_at],
+        methods: [:price, :sku],
+        only: [:available_on, :description, :name, :published, :created_at, :deleted_at],
         include: {
           variants: {
-            only: [:sku],
-            include: {
-              option_values: {
-                only: [:name, :presentation]
-              }
-            }
+            only: [:sku, :id],
+            methods: [:format, :uber_format, :release_date, :preorderable, :published]
           }
         }
       })
+      result[:artists] = artists.map(&:name)
+      result[:genres] = genres.map(&:name)
+      result[:label] = label.try(:name) 
+      result[:supplier] = supplier.try(:name)
+
       result[:taxon_ids] = taxons.map(&:self_and_ancestors).flatten.uniq.map(&:id) unless taxons.empty?
-      result[:image_url] = images.first.attachment.url unless images.empty?
       result
     end
 
@@ -85,10 +84,10 @@ module Spree
     class Product::ElasticsearchQuery
       include ::Virtus.model
 
-      attribute :price_min, Float
-      attribute :price_max, Float
       attribute :query, String
       attribute :taxons, Array
+      attribute :uber_format, String
+      attribute :sorting, String
       attribute :browse_mode, Boolean
       attribute :sorting, String
 
@@ -118,7 +117,7 @@ module Spree
       def to_hash
         q = { match_all: {} }
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['name^5','description','sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: ['name^5', 'artists', 'label', 'supplier', 'genres', 'description','sku'], default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 
@@ -126,9 +125,9 @@ module Spree
         # transform:
         # key: [val, val] -> {terms: properties.key: [val, val] }
         #                    {terms: properties.key: [val] }
-        @properties.each do |key, val|
-          and_filter << { terms: { "properties.#{key}" => val } }
-        end
+        #@properties.each do |key, val|
+        #  and_filter << { terms: { "properties.#{key}" => val } }
+        #end
 
         sorting = case @sorting
         when "name_asc"
@@ -140,22 +139,17 @@ module Spree
         when "price_desc"
           [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
         when "newest"
-          [ {trending_score: {order: "desc" }}, "_score" ]
-        when "score"
-          [ "_score", {"name.untouched" => { order: "asc" }}, {"price" => { order: "asc" }} ]
-        when "discount"
-          [ {discount_rate: {order: "desc" }}, "_score" ]
-        when "recommended"
-          [ {popularity_score: {order: "desc" }}, "_score" ]
+          [ {release_date: {order: "desc" }}, "_score" ]
         else # same as newest
-          [ {trending_score: {order: "desc" }}, "_score" ]
+          [ {release_date: {order: "desc" }}, "_score" ]
         end
 
         # facets
         aggs = {
-          price: { stats: { field: "price" } },
-          merchant: { terms: { field: "properties.merchant", size: 0 } },
-          brand: { terms: { field: "properties.brand", size: 0 } },
+          artist:    { terms: { field: "artists", size: 0 } },
+          genre:     { terms: { field: "genres", size: 0 } },
+          label:     { terms: { field: "label", size: 0 } },
+          supplier:  { terms: { field: "supplier", size: 0 } },
           taxon_ids: { terms: { field: "taxon_ids", size: 0 } }
         }
 
@@ -172,17 +166,13 @@ module Spree
         # taxon and property filters have an effect on the facets
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
 
-        # filter by price
-        price = {}
-        price[:gte] = price_min if !price_min.nil? && price_min > 0
-        price[:lte] = price_max if !price_max.nil? && price_max > 0
-        and_filter << { range: { price: price } } unless price.empty?
+        # match uber_format
+        and_filter << { term: uber_format } if uber_format.present?
 
         # only return products that are available
         and_filter << { range: { available_on: { lte: "now" } } }
         and_filter << { missing: { field: :deleted_at } }
-        # and have an image
-        #and_filter << { exists: { field: :image_url } }
+
         result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
 
         result
