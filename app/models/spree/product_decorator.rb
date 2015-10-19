@@ -12,7 +12,6 @@ module Spree
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
       end
       indexes :description, analyzer: 'snowball'
-      indexes :price, type: 'double'
       indexes :sku, type: 'string', index: 'not_analyzed'
       indexes :taxon_ids, type: 'string', index: 'not_analyzed'
 
@@ -21,6 +20,8 @@ module Spree
 
       indexes :variants, type: 'nested' do
         indexes :id, type: 'integer', index: 'not_analyzed'
+        indexes :sku, type: 'string', index: 'not_analyzed'
+        indexes :price, type: 'double'
         indexes :release_date, type: 'date', format: 'dateOptionalTime', include_in_all: false
 
         indexes :format, type: 'string', index: 'not_analyzed'
@@ -31,15 +32,11 @@ module Spree
         indexes :published,    type: 'boolean', index: 'not_analyzed'
       end
 
+      # genres
+      indexes :genres, type: 'integer', index: 'not_analyzed'
       # artists
       indexes :artists, type: 'multi_field' do
         indexes :artists,      type: 'string', analyzer: 'search_analyzer'
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
-        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
-      end
-      # genres
-      indexes :genres, type: 'multi_field' do
-        indexes :genres,       type: 'string', analyzer: 'search_analyzer'
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
       end
@@ -62,17 +59,17 @@ module Spree
 
     def as_indexed_json(options = {})
       result = as_json({
-        methods: [:price, :sku],
+        methods: [:sku],
         only: [:available_on, :description, :name, :published, :created_at, :deleted_at],
         include: {
           variants: {
-            only: [:sku, :id],
+            only: [:price, :sku, :id],
             methods: [:format, :uber_format, :release_date, :preorderable, :published]
           }
         }
       })
       result[:artists] = artists.map(&:name)
-      result[:genres] = genres.map(&:name)
+      result[:genres] = release.genres.map(&:id)
       result[:label] = label.try(:name) 
       result[:supplier] = supplier.try(:name)
 
