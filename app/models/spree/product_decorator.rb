@@ -115,7 +115,7 @@ module Spree
       def to_hash
         q = { match_all: {} }
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['name^5', 'artists', 'label', 'supplier', 'genres', 'description','sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: ['name^5', 'artists', 'label', 'supplier', 'description', 'sku'], default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 
