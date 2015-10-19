@@ -63,8 +63,8 @@ module Spree
         only: [:available_on, :description, :name, :published, :created_at, :deleted_at],
         include: {
           variants: {
-            only: [:price, :sku, :id],
-            methods: [:format, :uber_format, :release_date, :preorderable, :published]
+            only: [:sku, :id],
+            methods: [:price, :format, :uber_format, :release_date, :preorderable, :published]
           }
         }
       })
