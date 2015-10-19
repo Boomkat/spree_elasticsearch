@@ -9,7 +9,8 @@ module Spree
 
       attribute :query, String
       attribute :taxons, Array
-      attribute :uber_format, String
+      attribute :genres, Array
+      attribute :uber_format, Array
       attribute :browse_mode, Boolean, default: true
       attribute :per_page, String
       attribute :page, String
@@ -25,7 +26,8 @@ module Spree
           Spree::Product::ElasticsearchQuery.new(
             query: query,
             taxons: taxons,
-            browse_mode: browse_mode,
+            genres: genres,
+            uber_format: uber_format,
             sorting: sorting
           ).to_hash
         )
@@ -65,8 +67,8 @@ module Spree
         @query = Escaping.escape(params[:keywords] || "")
         @sorting = params[:sorting]
         @taxons = params[:taxon] unless params[:taxon].nil?
-        @uber_format = params[:uber_format]
-        @browse_mode = params[:browse_mode] unless params[:browse_mode].nil?
+        @genres = params[:genres].split(",") unless params[:genres].nil?
+        @uber_format = params[:uber_format].split(",") unless params[:uber_format].nil?
 
         @per_page = (params[:per_page].to_i <= 0) ? Spree::Config[:products_per_page] : params[:per_page].to_i
         @page = (params[:page].to_i <= 0) ? 1 : params[:page].to_i

@@ -19,7 +19,7 @@ module Spree
       indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :published,    type: 'boolean', index: 'not_analyzed', include_in_all: false
 
-      indexes :release_formats, type: 'nested' do
+      indexes :variants, type: 'nested' do
         indexes :id, type: 'integer', index: 'not_analyzed'
         indexes :release_date, type: 'date', format: 'dateOptionalTime', include_in_all: false
 
@@ -86,9 +86,10 @@ module Spree
 
       attribute :query, String
       attribute :taxons, Array
-      attribute :uber_format, String
-      attribute :sorting, String
-      attribute :browse_mode, Boolean
+      attribute :genres, Array
+      attribute :uber_format, Array
+      attribute :status, Array
+      attribute :release_date, String
       attribute :sorting, String
 
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
@@ -167,14 +168,51 @@ module Spree
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
 
         # match uber_format
-        and_filter << { term: uber_format } if uber_format.present?
+        nested = {
+          nested: {
+            path: 'variants',
+            filter: {
+              and: [ 
+                { term: { 'variants.published': true } }
+              ]
+            }
+          }
+        }
+        unless uber_format.empty? || uber_format.include?('all')
+          nested[:nested][:filter][:and] << { term: { 'variants.uber_format': uber_format } }
+        end
+
+        # filter by status (limiting by uber format previously if needed
+        unless status.empty? || status.include?('all')
+          #nested[:nested][:filter][:and] << 'a'
+        end
+
+        # filter by release date
+        release_date_filter = case release_date
+        when 'week'
+          'now-1w'
+        when 'month'
+          'now-1M'
+        when 'year'
+          'now-1y' 
+        else
+        end
+        nested[:nested][:filter][:and] << { range: { 'variants.release_date': { gte: release_date_filter } } } if release_date_filter
+        
+        # append the nested query
+        and_filter << nested unless nested[:nested][:filter][:and].empty?
+
+        # match genres
+        and_filter << { terms: { genres: genres } } unless genres.empty? || genres.include?('all')
 
         # only return products that are available
         and_filter << { range: { available_on: { lte: "now" } } }
         and_filter << { missing: { field: :deleted_at } }
+        and_filter << { term: { published: true } }
 
         result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
-
+        
+        pp result
         result
       end
     end
