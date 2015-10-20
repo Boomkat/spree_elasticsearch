@@ -60,12 +60,6 @@ module Spree
       result = as_json({
         methods: [:sku],
         only: [:available_on, :description, :name, :published, :created_at, :deleted_at],
-        include: {
-          variants: {
-            only: [:sku, :id],
-            methods: [:price, :format, :uber_format, :release_date, :preorderable, :published]
-          }
-        }
       })
       result[:artists] = artists.map(&:name)
       result[:genres] = release.genres.map(&:id)
@@ -73,6 +67,18 @@ module Spree
 
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
+  
+      # map variant data
+      result[:variants] = variants.map do |v|
+        h = v.as_json({
+          only: [:sku, :id],
+          methods: [:price, :format, :uber_format, :release_date, :preorderable, :published]
+        })
+        h[:preorderable] = v.preorderable?
+        h[:published] = v.published?
+        h[:in_stock] = v.in_stock?
+        h
+      end
 
       result[:taxon_ids] = taxons.map(&:self_and_ancestors).flatten.uniq.map(&:id) unless taxons.empty?
       result
