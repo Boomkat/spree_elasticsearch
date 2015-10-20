@@ -90,6 +90,23 @@ module Spree
       attribute :release_date, String
       attribute :sorting, String
 
+      def sorting
+        case @sorting
+        when "name_asc"
+          [ {"name.untouched" => { order: "asc" }}, {price: { order: "asc" }}, "_score" ]
+        when "name_desc"
+          [ {"name.untouched" => { order: "desc" }}, {price: { order: "asc" }}, "_score" ]
+        when "price_asc"
+          [ {price: { order: "asc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
+        when "price_desc"
+          [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
+        when "newest"
+          [ {release_date: {order: "desc" }}, "_score" ]
+        else # same as newest
+          [ {release_date: {order: "desc" }}, "_score" ]
+        end
+      end
+
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
       # When browse_mode is disabled, the taxon filter is placed inside the filtered query. This causes the facets to be limited to the resulting set.
 
@@ -127,21 +144,6 @@ module Spree
         #@properties.each do |key, val|
         #  and_filter << { terms: { "properties.#{key}" => val } }
         #end
-
-        sorting = case @sorting
-        when "name_asc"
-          [ {"name.untouched" => { order: "asc" }}, {price: { order: "asc" }}, "_score" ]
-        when "name_desc"
-          [ {"name.untouched" => { order: "desc" }}, {price: { order: "asc" }}, "_score" ]
-        when "price_asc"
-          [ {price: { order: "asc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
-        when "price_desc"
-          [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
-        when "newest"
-          [ {release_date: {order: "desc" }}, "_score" ]
-        else # same as newest
-          [ {release_date: {order: "desc" }}, "_score" ]
-        end
 
         # facets
         aggs = {
