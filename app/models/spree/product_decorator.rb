@@ -18,6 +18,11 @@ module Spree
       indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :published,    type: 'boolean', index: 'not_analyzed', include_in_all: false
 
+      indexes :tracks, type: 'multi_field' do
+        indexes :tracks,      type: 'string', analyzer: 'search_analyzer'
+        indexes :untouched,   type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+
       indexes :variants, type: 'nested' do
         indexes :id, type: 'integer', index: 'not_analyzed'
         indexes :sku, type: 'string', index: 'not_analyzed'
@@ -73,6 +78,9 @@ module Spree
       result[:label] = label.try(:name) 
       result[:supplier] = supplier.try(:name)
 
+      # Store names of all tracks, uniq'd to be able to search by track name
+      result[:tracks] = track_products.map(&:name).uniq
+
       result[:taxon_ids] = taxons.map(&:self_and_ancestors).flatten.uniq.map(&:id) unless taxons.empty?
       result
     end
@@ -115,7 +123,7 @@ module Spree
       def to_hash
         q = { match_all: {} }
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['name^5', 'artists', 'label', 'supplier', 'description', 'sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'supplier', 'description', 'tracks', 'sku'], default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 
