@@ -51,12 +51,6 @@ module Spree
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
       end
-      # supplier
-      indexes :supplier, type: 'multi_field' do
-        indexes :supplier,     type: 'string', analyzer: 'search_analyzer'
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
-        indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
-      end
 
       indexes :created_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :deleted_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
@@ -76,7 +70,6 @@ module Spree
       result[:artists] = artists.map(&:name)
       result[:genres] = release.genres.map(&:id)
       result[:label] = label.try(:name) 
-      result[:supplier] = supplier.try(:name)
 
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
@@ -123,7 +116,7 @@ module Spree
       def to_hash
         q = { match_all: {} }
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'supplier', 'description', 'tracks', 'sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'description', 'tracks', 'sku'], default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 
@@ -155,7 +148,6 @@ module Spree
           artist:    { terms: { field: "artists", size: 0 } },
           genre:     { terms: { field: "genres", size: 0 } },
           label:     { terms: { field: "label", size: 0 } },
-          supplier:  { terms: { field: "supplier", size: 0 } },
           taxon_ids: { terms: { field: "taxon_ids", size: 0 } }
         }
 
