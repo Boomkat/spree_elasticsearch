@@ -23,6 +23,11 @@ module Spree
         indexes :untouched,   type: 'string', include_in_all: false, index: 'not_analyzed'
       end
 
+      indexes :track_artists, type: 'multi_field' do
+        indexes :track_artists, type: 'string', analyzer: 'search_analyzer'
+        indexes :untouched,     type: 'string', include_in_all: false, index: 'not_analyzed'
+      end
+
       indexes :variants, type: 'nested' do
         indexes :id, type: 'integer', index: 'not_analyzed'
         indexes :sku, type: 'string', index: 'not_analyzed'
@@ -67,6 +72,7 @@ module Spree
 
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
+      result[:track_artists] = release.tracks.map {|t| t.artists.map(&:name) }.flatten.uniq
   
       # map variant data
       result[:variants] = variants.map do |v|
@@ -139,7 +145,7 @@ module Spree
       def to_hash
         q = { match_all: {} }
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'description', 'tracks', 'sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'description', 'tracks', 'track_artists', 'sku'], default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 
