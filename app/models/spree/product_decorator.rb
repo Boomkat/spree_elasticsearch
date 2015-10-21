@@ -78,9 +78,9 @@ module Spree
       result[:variants] = variants.map do |v|
         h = v.as_json({
           only: [:sku, :id],
-          methods: [:price, :format, :uber_format, :release_date, :preorderable, :published]
+          methods: [:price, :format, :uber_format, :release_date]
         })
-        h[:preorderable] = v.preorderable?
+        h[:can_preorder] = v.definitive_release_format.try(:can_pre_order) || false
         h[:published] = v.published?
         h[:in_stock] = v.in_stock?
         h
