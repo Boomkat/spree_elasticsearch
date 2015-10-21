@@ -86,7 +86,7 @@ module Spree
         h
       end
 
-      result[:taxon_ids] = taxons.map(&:self_and_ancestors).flatten.uniq.map(&:id) unless taxons.empty?
+      result[:taxon_ids] = taxons.map(&:id).uniq unless taxons.empty?
       result
     end
 
