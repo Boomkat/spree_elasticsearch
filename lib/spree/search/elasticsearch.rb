@@ -12,6 +12,7 @@ module Spree
       attribute :genres, Array
       attribute :status, Array
       attribute :uber_format, Array
+      attribute :release_date, String
       attribute :browse_mode, Boolean, default: true
       attribute :per_page, String
       attribute :page, String
@@ -29,6 +30,7 @@ module Spree
             taxons: taxons,
             genres: genres,
             uber_format: uber_format,
+            release_date: release_date,
             status: status,
             sorting: sorting
           ).to_hash
@@ -68,10 +70,11 @@ module Spree
       def prepare(params)
         @query = Escaping.escape(params[:keywords] || "")
         @sorting = params[:sorting]
-        @taxons = params[:taxon] unless params[:taxon].nil?
+        @taxons = params[:taxon].split(",") unless params[:taxon].nil?
         @genres = params[:genre].split(",") unless params[:genre].nil?
         @status = params[:status].split(",") unless params[:status].nil?
         @uber_format = params[:format].split(",") unless params[:format].nil?
+        @release_date = params[:release_date] unless params[:release_date].blank?
 
         @per_page = (params[:per_page].to_i <= 0) ? 25 : params[:per_page].to_i
         @page = (params[:page].to_i <= 0) ? 1 : params[:page].to_i
