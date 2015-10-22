@@ -144,8 +144,22 @@ module Spree
       # }
       def to_hash
         q = { match_all: {} }
+
+        fields = case category
+        when 'artist'
+          ['artists']
+        when 'release-title'
+          ['name']
+        when 'label'
+          ['label']
+        when 'catalogue-number'
+          ['sku']
+        else
+          ['artists^5', 'name^3', 'label', 'description', 'tracks', 'track_artists', 'sku']
+        end
+
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: ['artists^5', 'name^3', 'label', 'description', 'tracks', 'track_artists', 'sku'], default_operator: 'AND', use_dis_max: true } }
+          q = { query_string: { query: query, fields: fields, default_operator: 'AND', use_dis_max: true } }
         end
         query = q
 

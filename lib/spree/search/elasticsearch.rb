@@ -13,6 +13,7 @@ module Spree
       attribute :status, Array
       attribute :uber_format, Array
       attribute :release_date, String
+      attribute :category, String
       attribute :browse_mode, Boolean, default: true
       attribute :per_page, String
       attribute :page, String
@@ -31,6 +32,7 @@ module Spree
             genres: genres,
             uber_format: uber_format,
             release_date: release_date,
+            category: category,
             status: status,
             sorting: sorting
           ).to_hash
