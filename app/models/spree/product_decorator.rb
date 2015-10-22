@@ -82,7 +82,7 @@ module Spree
         })
         h[:can_preorder] = v.definitive_release_format.try(:can_pre_order) || false
         h[:published] = v.published?
-        h[:in_stock] = v.in_stock?
+        h[:in_stock] = v.suppliable?
         h
       end
 
