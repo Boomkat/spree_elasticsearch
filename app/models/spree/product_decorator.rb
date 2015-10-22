@@ -37,7 +37,7 @@ module Spree
         indexes :format, type: 'string', index: 'not_analyzed'
         indexes :uber_format, type: 'string', index: 'not_analyzed'
 
-        indexes :preorderable, type: 'boolean', index: 'not_analyzed'
+        indexes :can_preorder, type: 'boolean', index: 'not_analyzed'
         indexes :in_stock,     type: 'boolean', index: 'not_analyzed'
         indexes :published,    type: 'boolean', index: 'not_analyzed'
       end
@@ -215,7 +215,7 @@ module Spree
           if status.include?('pre-order') # show preorders
             nested << {
               and: [
-                { term: { 'variants.preorderable': true } },
+                { term: { 'variants.can_preorder': true } },
                 { range: { 'variants.release_date': { gte: 'now' } } }
               ]
             }
