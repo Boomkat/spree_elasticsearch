@@ -196,7 +196,7 @@ module Spree
           if uber_format.include? 'Merchandise'
             uber_format.push("Toys", "Miscellaneous", "Books / Mags", "DVD", "Apparel", "Tickets")
           end
-          nested << { term: { 'variants.uber_format': uber_format } }
+          nested << { terms: { 'variants.uber_format': uber_format } }
         end
 
         # filter by status (limiting by uber format previously if needed
