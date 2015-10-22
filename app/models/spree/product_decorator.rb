@@ -192,6 +192,10 @@ module Spree
         nested = release_format_filter[:nested][:filter][:and]
 
         unless uber_format.empty? || uber_format.include?('all')
+          # miscellaneous is a bit messy, it's actually a range of taxons
+          if uber_format.include? 'Merchandise'
+            uber_format.push("Toys", "Miscellaneous", "Books / Mags", "DVD", "Apparel", "Tickets")
+          end
           nested << { term: { 'variants.uber_format': uber_format } }
         end
 
