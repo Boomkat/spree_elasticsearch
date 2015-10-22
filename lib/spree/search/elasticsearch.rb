@@ -70,7 +70,7 @@ module Spree
         @genres = params[:genres].split(",") unless params[:genres].nil?
         @uber_format = params[:uber_format].split(",") unless params[:uber_format].nil?
 
-        @per_page = (params[:per_page].to_i <= 0) ? Spree::Config[:products_per_page] : params[:per_page].to_i
+        @per_page = (params[:per_page].to_i <= 0) ? 25 : params[:per_page].to_i
         @page = (params[:page].to_i <= 0) ? 1 : params[:page].to_i
       end
     end
