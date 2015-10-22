@@ -67,8 +67,8 @@ module Spree
         @query = Escaping.escape(params[:keywords] || "")
         @sorting = params[:sorting]
         @taxons = params[:taxon] unless params[:taxon].nil?
-        @genres = params[:genres].split(",") unless params[:genres].nil?
-        @uber_format = params[:uber_format].split(",") unless params[:uber_format].nil?
+        @genres = params[:genre].split(",") unless params[:genre].nil?
+        @uber_format = params[:format].split(",") unless params[:format].nil?
 
         @per_page = (params[:per_page].to_i <= 0) ? 25 : params[:per_page].to_i
         @page = (params[:page].to_i <= 0) ? 1 : params[:page].to_i
