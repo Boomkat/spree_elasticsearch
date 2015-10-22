@@ -246,7 +246,7 @@ module Spree
           [ {release_date: {order: "desc" }}, "_score" ]
         else
           [ {"variants.in_stock": {
-            mode: :min,
+            mode: :max,
             order: :desc,
             nested_filter: { and: nested } 
           }}, "_score" ]
