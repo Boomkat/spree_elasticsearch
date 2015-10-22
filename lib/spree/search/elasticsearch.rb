@@ -29,6 +29,7 @@ module Spree
             taxons: taxons,
             genres: genres,
             uber_format: uber_format,
+            status: status,
             sorting: sorting
           ).to_hash
         )
