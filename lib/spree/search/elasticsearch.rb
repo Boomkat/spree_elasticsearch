@@ -10,6 +10,7 @@ module Spree
       attribute :query, String
       attribute :taxons, Array
       attribute :genres, Array
+      attribute :status, Array
       attribute :uber_format, Array
       attribute :browse_mode, Boolean, default: true
       attribute :per_page, String
@@ -68,6 +69,7 @@ module Spree
         @sorting = params[:sorting]
         @taxons = params[:taxon] unless params[:taxon].nil?
         @genres = params[:genre].split(",") unless params[:genre].nil?
+        @status = params[:status].split(",") unless params[:status].nil?
         @uber_format = params[:format].split(",") unless params[:format].nil?
 
         @per_page = (params[:per_page].to_i <= 0) ? 25 : params[:per_page].to_i

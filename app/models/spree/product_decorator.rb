@@ -179,7 +179,7 @@ module Spree
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
 
         # match uber_format
-        nested = {
+        release_format_filter = {
           nested: {
             path: 'variants',
             filter: {
@@ -189,29 +189,55 @@ module Spree
             }
           }
         }
+        nested = release_format_filter[:nested][:filter][:and]
+
         unless uber_format.empty? || uber_format.include?('all')
-          nested[:nested][:filter][:and] << { term: { 'variants.uber_format': uber_format } }
+          nested << { term: { 'variants.uber_format': uber_format } }
         end
 
         # filter by status (limiting by uber format previously if needed
         unless status.empty? || status.include?('all')
-          #nested[:nested][:filter][:and] << 'a'
+          # filter by stock status
+          # both filters enabled == show all
+          unless status.include?('in-stock') && status.include?('out-of-stock')
+            if status.include?('in-stock')
+              nested << { term: { 'variants.in_stock': true } }
+            end
+            if status.include?('out-of-stock')
+              nested << { term: { 'variants.in_stock': false } }
+            end
+          end
+
+          if status.include?('sale') # items in the sale taxon
+            and_filter << { term: { taxon_ids: BoomkatTaxon.sale.id } }
+          end
+
+          if status.include?('pre-order') # show preorders
+            nested << {
+              and: [
+                { term: { 'variants.preorderable': true } },
+                { range: { 'variants.release_date': { gte: 'now' } } }
+              ]
+            }
+          else # hide preorders
+            nested << { range: { 'variants.release_date': { lte: 'now' } } }
+          end
         end
 
         # filter by release date
         release_date_filter = case release_date
-        when 'week'
+        when 'last-week'
           'now-1w'
-        when 'month'
+        when 'last-month'
           'now-1M'
-        when 'year'
+        when 'last-year'
           'now-1y' 
         else
         end
-        nested[:nested][:filter][:and] << { range: { 'variants.release_date': { gte: release_date_filter } } } if release_date_filter
+        nested << { range: { 'variants.release_date': { gte: release_date_filter } } } if release_date_filter
         
         # append the nested query
-        and_filter << nested unless nested[:nested][:filter][:and].empty?
+        and_filter << release_format_filter unless nested.empty?
 
         # match genres
         and_filter << { terms: { genres: genres } } unless genres.empty? || genres.include?('all')
