@@ -100,24 +100,8 @@ module Spree
       attribute :uber_format, Array
       attribute :status, Array
       attribute :release_date, String
+      attribute :category, String
       attribute :sorting, String
-
-      def sorting
-        case @sorting
-        when "name_asc"
-          [ {"name.untouched" => { order: "asc" }}, {price: { order: "asc" }}, "_score" ]
-        when "name_desc"
-          [ {"name.untouched" => { order: "desc" }}, {price: { order: "asc" }}, "_score" ]
-        when "price_asc"
-          [ {price: { order: "asc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
-        when "price_desc"
-          [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
-        when "newest"
-          [ {release_date: {order: "desc" }}, "_score" ]
-        else # same as newest
-          [ {release_date: {order: "desc" }}, "_score" ]
-        end
-      end
 
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
       # When browse_mode is disabled, the taxon filter is placed inside the filtered query. This causes the facets to be limited to the resulting set.
@@ -147,9 +131,9 @@ module Spree
 
         fields = case category
         when 'artist'
-          ['artists']
+          ['artists', 'track_artists']
         when 'release-title'
-          ['name']
+          ['name', 'tracks']
         when 'label'
           ['label']
         when 'catalogue-number'
@@ -164,31 +148,7 @@ module Spree
         query = q
 
         and_filter = []
-        # transform:
-        # key: [val, val] -> {terms: properties.key: [val, val] }
-        #                    {terms: properties.key: [val] }
-        #@properties.each do |key, val|
-        #  and_filter << { terms: { "properties.#{key}" => val } }
-        #end
 
-        # facets
-        aggs = {
-          artist:    { terms: { field: "artists", size: 0 } },
-          genre:     { terms: { field: "genres", size: 0 } },
-          label:     { terms: { field: "label", size: 0 } },
-          taxon_ids: { terms: { field: "taxon_ids", size: 0 } }
-        }
-
-        # basic skeleton
-        result = {
-          min_score: 0.1,
-          query: { filtered: {} },
-          sort: sorting,
-          aggs: aggs
-        }
-
-        # add query and filters to filtered
-        result[:query][:filtered][:query] = query
         # taxon and property filters have an effect on the facets
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
 
@@ -212,7 +172,7 @@ module Spree
           end
           nested << { terms: { 'variants.uber_format': uber_format } }
         end
-
+        
         # filter by status (limiting by uber format previously if needed
         unless status.empty? || status.include?('all')
           # filter by stock status
@@ -265,6 +225,42 @@ module Spree
         and_filter << { missing: { field: :deleted_at } }
         and_filter << { term: { published: true } }
 
+        # facets
+        aggs = {
+          artist:    { terms: { field: "artists", size: 0 } },
+          genre:     { terms: { field: "genres", size: 0 } },
+          label:     { terms: { field: "label", size: 0 } },
+          taxon_ids: { terms: { field: "taxon_ids", size: 0 } }
+        }
+
+        sorting = case @sorting
+        when "name_asc"
+          [ {"name.untouched" => { order: "asc" }}, {price: { order: "asc" }}, "_score" ]
+        when "name_desc"
+          [ {"name.untouched" => { order: "desc" }}, {price: { order: "asc" }}, "_score" ]
+        when "price_asc"
+          [ {price: { order: "asc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
+        when "price_desc"
+          [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
+        when "newest"
+          [ {release_date: {order: "desc" }}, "_score" ]
+        else
+          [ {"variants.in_stock": {
+            mode: :min,
+            order: :desc,
+            nested_filter: { and: nested } 
+          }}, "_score" ]
+        end
+
+        # basic skeleton
+        result = {
+          min_score: 0.1,
+          query: { filtered: {} },
+          sort: sorting,
+          aggs: aggs
+        }
+        # add query and filters to filtered
+        result[:query][:filtered][:query] = query
         result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
         
         pp result
