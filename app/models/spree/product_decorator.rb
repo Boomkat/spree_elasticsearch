@@ -161,7 +161,7 @@ module Spree
             bool: {
               should: [
                 { query_string: { query: query, fields: fields, default_operator: 'AND', use_dis_max: true } },
-                { multi_match: { query: query, fields: exact_fields, boost: 200, type: 'best_fields'} }
+                { multi_match: { query: query, fields: exact_fields, boost: 1, type: 'best_fields'} }
               ]
             }
           }
