@@ -8,8 +8,8 @@ module Spree
     mapping _all: {'index_analyzer' => 'search_analyzer', 'search_analyzer' => 'whitespace_analyzer'} do
       # search, autocomplete, untouched & exact match
       indexes :name, type: 'multi_field' do
-        indexes :name,         type: 'string', analyzer: 'search_analyzer', boost: 100
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer', boost: 100
+        indexes :name,         type: 'string', analyzer: 'search_analyzer'
+        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
         indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
