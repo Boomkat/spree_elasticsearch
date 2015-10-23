@@ -6,10 +6,12 @@ module Spree
     document_type 'spree_product'
 
     mapping _all: {'index_analyzer' => 'search_analyzer', 'search_analyzer' => 'whitespace_analyzer'} do
+      # search, autocomplete, untouched & exact match
       indexes :name, type: 'multi_field' do
         indexes :name,         type: 'string', analyzer: 'search_analyzer', boost: 100
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer', boost: 100
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
       indexes :description, analyzer: 'snowball'
       indexes :sku, type: 'string', index: 'not_analyzed'
@@ -21,11 +23,13 @@ module Spree
       indexes :tracks, type: 'multi_field' do
         indexes :tracks,      type: 'string', analyzer: 'search_analyzer'
         indexes :untouched,   type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :lowercase,   type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
 
       indexes :track_artists, type: 'multi_field' do
         indexes :track_artists, type: 'string', analyzer: 'search_analyzer'
         indexes :untouched,     type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :lowercase,     type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
 
       indexes :variants, type: 'nested' do
@@ -49,12 +53,14 @@ module Spree
         indexes :artists,      type: 'string', analyzer: 'search_analyzer'
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
       # label
       indexes :label, type: 'multi_field' do
         indexes :label,        type: 'string', analyzer: 'search_analyzer'
         indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
+        indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
 
       indexes :created_at, type: 'date', format: 'dateOptionalTime', include_in_all: false
@@ -77,9 +83,10 @@ module Spree
       # map variant data
       result[:variants] = variants.map do |v|
         h = v.as_json({
-          only: [:sku, :id],
+          only: [:id],
           methods: [:price, :format, :uber_format, :release_date]
         })
+        h[:sku] = v.definitive_release_format.try(:catalogue_number)
         h[:can_preorder] = v.definitive_release_format.try(:can_pre_order) || false
         h[:published] = v.published?
         h[:in_stock] = v.suppliable?
@@ -129,21 +136,35 @@ module Spree
       def to_hash
         q = { match_all: {} }
 
-        fields = case category
+        fields, exact_fields = case category
         when 'artist'
-          ['artists', 'track_artists']
+          [
+            ['artists^3', 'track_artists'],
+            ['artists.lowercase^3', 'track_artists.lowercase']
+          ]
         when 'release-title'
-          ['name', 'tracks']
+          [['name^3', 'tracks'], ['name.lowercase^3', 'tracks.lowercase']]
         when 'label'
-          ['label']
+          [['label'], ['label.lowercase^1']]
         when 'catalogue-number'
-          ['sku']
+          [['sku'], ['sku']]
         else
-          ['artists^5', 'name^3', 'label', 'description', 'tracks', 'track_artists', 'sku']
+          [
+            ['artists^5', 'name^3', 'label^1', 'tracks', 'track_artists', 'sku'],
+            ['artists.lowercase^5', 'name.lowercase^3', 'label.lowercase^1', 'tracks.lowercase', 'track_artists.lowercase']
+          ]
+          # TODO: re-enable description search
         end
 
         unless query.blank? # nil or empty
-          q = { query_string: { query: query, fields: fields, default_operator: 'AND', use_dis_max: true } }
+          q = {
+            bool: {
+              should: [
+                { query_string: { query: query, fields: fields, default_operator: 'AND', use_dis_max: true } },
+                { multi_match: { query: query, fields: exact_fields, boost: 200, type: 'best_fields'} }
+              ]
+            }
+          }
         end
         query = q
 
@@ -157,7 +178,7 @@ module Spree
           nested: {
             path: 'variants',
             filter: {
-              and: [ 
+              and: [
                 { term: { 'variants.published': true } }
               ]
             }
@@ -209,11 +230,11 @@ module Spree
         when 'last-month'
           'now-1M'
         when 'last-year'
-          'now-1y' 
+          'now-1y'
         else
         end
         nested << { range: { 'variants.release_date': { gte: release_date_filter } } } if release_date_filter
-        
+ 
         # append the nested query
         and_filter << release_format_filter unless nested.empty?
 
@@ -242,13 +263,29 @@ module Spree
           [ {price: { order: "asc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
         when "price_desc"
           [ {price: { order: "desc" }}, {"name.untouched" => { order: "asc" }}, "_score" ]
+        when "preorders"
+          [ {"variants.release_date": {
+            mode: :min,
+            order: :asc,
+            nested_filter: { and: nested }
+          }}, "_score" ]
+        when "oldest"
+          [ {"variants.release_date": {
+            mode: :max,
+            order: :asc,
+            nested_filter: { and: nested }
+          }}, "_score" ]
         when "newest"
-          [ {release_date: {order: "desc" }}, "_score" ]
+          [ {"variants.release_date": {
+            mode: :max,
+            order: :desc,
+            nested_filter: { and: nested }
+          }}, "_score" ]
         else
           [ {"variants.in_stock": {
             mode: :max,
             order: :desc,
-            nested_filter: { and: nested } 
+            nested_filter: { and: nested }
           }}, "_score" ]
         end
 
@@ -262,8 +299,8 @@ module Spree
         # add query and filters to filtered
         result[:query][:filtered][:query] = query
         result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
-        
-        pp result
+ 
+        puts result.to_json
         result
       end
     end

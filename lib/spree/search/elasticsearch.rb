@@ -74,7 +74,7 @@ module Spree
         @sorting = params[:sorting]
         @taxons = params[:taxon].split(",") unless params[:taxon].nil?
         @genres = params[:genre].split(",") unless params[:genre].nil?
-        @status = params[:status].split(",") unless params[:status].nil?
+        @status = params[:status] ? params[:status].split(",") : []
         @uber_format = params[:format].split(",") unless params[:format].nil?
         @release_date = params[:release_date] unless params[:release_date].blank?
 
