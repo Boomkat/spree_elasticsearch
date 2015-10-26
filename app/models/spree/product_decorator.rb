@@ -290,13 +290,13 @@ module Spree
             mode: :max,
             order: :asc,
             nested_filter: { and: nested }
-          }}, "_id" ]
+          }}, { description: :desc }, "_id" ]
         when "newest"
           [ {"variants.release_date": {
             mode: :max,
             order: :desc,
             nested_filter: { and: nested }
-          }}, "_id" ]
+          }}, { description: :desc }, "_id" ]
         else
           [ {"variants.in_stock": {
             mode: :max,
