@@ -305,28 +305,36 @@ module Spree
         # basic skeleton
         result = {
           min_score: 0.1,
-          query: {
+          query: nil,
+          sort: sorting,
+          aggs: aggs
+        }
+        # add query and filters to filtered
+        filtered = { filtered: { query: query } }
+        filtered[:filtered][:filter] = { and: and_filter } unless and_filter.empty?
+
+        # if we're sorting by score, add weighing by release date (newer
+        # releases show up higher) 
+        if sorting.include? "_score"
+          result[:query] = {
             function_score: {
-              query: { filtered: { query: query } },
+              query: filtered,
               functions: [
                 { boost_factor: 1 },
                 { gauss: {
-                    "available_on": {
-                      scale: '365d'
-                    }
+                  "available_on": {
+                    scale: '365d'
                   }
+                }
                 }
               ],
               boost_mode: :multiply,
               score_mode: :sum
             }
-          },
-          sort: sorting,
-          aggs: aggs
-        }
-        # add query and filters to filtered
-        #result[:query][:filtered][:query] = query
-        result[:query][:function_score][:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
+          }
+        else # else just filter them
+          result[:query] = filtered
+        end
  
         puts result.to_json
         result
