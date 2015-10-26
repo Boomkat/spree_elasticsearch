@@ -14,10 +14,11 @@ module Spree
       attribute :uber_format, Array
       attribute :release_date, String
       attribute :category, String
-      attribute :browse_mode, Boolean, default: true
       attribute :per_page, String
       attribute :page, String
       attribute :sorting, String
+      attribute :product_reviews, Boolean
+      attribute :track_titles, Boolean
 
       def initialize(params)
         self.current_currency = Spree::Config[:currency]
@@ -34,7 +35,9 @@ module Spree
             release_date: release_date,
             category: category,
             status: status,
-            sorting: sorting
+            sorting: sorting,
+            product_reviews: product_reviews,
+            track_titles: track_titles
           ).to_hash
         )
         @result = search_result.limit(per_page).page(page)
@@ -77,6 +80,8 @@ module Spree
         @status = params[:status] ? params[:status].split(",") : []
         @uber_format = params[:format].split(",") unless params[:format].nil?
         @release_date = params[:release_date] unless params[:release_date].blank?
+        @product_reviews = params[:product_reviews].present?
+        @track_titles = params[:track_titles].present?
 
         @per_page = (params[:per_page].to_i <= 0) ? 25 : params[:per_page].to_i
         @page = (params[:page].to_i <= 0) ? 1 : params[:page].to_i

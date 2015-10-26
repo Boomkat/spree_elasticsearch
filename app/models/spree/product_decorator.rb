@@ -109,6 +109,8 @@ module Spree
       attribute :release_date, String
       attribute :category, String
       attribute :sorting, String
+      attribute :product_reviews, Boolean
+      attribute :track_titles, Boolean
 
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
       # When browse_mode is disabled, the taxon filter is placed inside the filtered query. This causes the facets to be limited to the resulting set.
@@ -143,7 +145,7 @@ module Spree
             ['artists.lowercase^3', 'track_artists.lowercase']
           ]
         when 'release-title'
-          [['name^3', 'tracks'], ['name.lowercase^3', 'tracks.lowercase']]
+          [['name^3'], ['name.lowercase^3']]
         when 'label'
           [['label'], ['label.lowercase^1']]
         when 'catalogue-number'
@@ -151,9 +153,17 @@ module Spree
         else
           [
             ['artists^5', 'name^3', 'label^1', 'tracks', 'track_artists', 'sku'],
-            ['artists.lowercase^5', 'name.lowercase^3', 'label.lowercase^1', 'tracks.lowercase', 'track_artists.lowercase']
+            ['artists.lowercase^5', 'name.lowercase^3', 'label.lowercase^1', 'track_artists.lowercase']
           ]
           # TODO: re-enable description search
+        end
+
+        if product_reviews
+          fields.push 'description'
+        end
+        if track_titles
+          fields.push 'tracks'
+          exact_fields.push 'tracks.lowercase'
         end
 
         unless query.blank? # nil or empty
@@ -209,6 +219,9 @@ module Spree
 
           if status.include?('sale') # items in the sale taxon
             and_filter << { term: { taxon_ids: BoomkatTaxon.sale.id } }
+          end
+          if status.include?('recommended')
+            and_filter << { term: { taxon_ids: BoomkatTaxon.recommended.id } }
           end
 
           if status.include?('pre-order') # show preorders
