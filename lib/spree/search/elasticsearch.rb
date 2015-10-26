@@ -75,7 +75,7 @@ module Spree
       def prepare(params)
         @query = Escaping.escape(params[:keywords] || "")
         @sorting = params[:sorting]
-        @taxons = params[:taxon].split(",") unless params[:taxon].nil?
+        @taxons = params[:taxon] ? params[:taxon].split(",") : []
         @genres = params[:genre].split(",") unless params[:genre].nil?
         @status = params[:status] ? params[:status].split(",") : []
         @uber_format = params[:format].split(",") unless params[:format].nil?
