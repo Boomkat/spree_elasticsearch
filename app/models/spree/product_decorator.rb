@@ -20,6 +20,8 @@ module Spree
       indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
       indexes :published,    type: 'boolean', index: 'not_analyzed', include_in_all: false
 
+      indexes :latest_release_date, type: 'date', format: 'dateOptionalTime', include_in_all: false
+
       indexes :tracks, type: 'multi_field' do
         indexes :tracks,      type: 'string', analyzer: 'search_analyzer'
         indexes :untouched,   type: 'string', include_in_all: false, index: 'not_analyzed'
@@ -69,13 +71,14 @@ module Spree
 
     def as_indexed_json(options = {})
       result = as_json({
-        methods: [:sku],
         only: [:available_on, :description, :name, :published, :created_at, :deleted_at],
       })
       result[:artists] = artists.map(&:name)
       result[:genres] = release.genres.map(&:id)
       result[:label] = label.try(:name) 
+      result[:sku] = variants.map{|v|  v.definitive_release_format.try(:catalogue_number) }.compact.uniq
 
+      result[:latest_release_date] = release.latest_release_date
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
       result[:track_artists] = release.tracks.map {|t| t.artists.map(&:name) }.flatten.uniq
