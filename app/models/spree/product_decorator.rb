@@ -78,7 +78,7 @@ module Spree
       result[:label] = label.try(:name) 
       result[:sku] = variants.map{|v|  v.definitive_release_format.try(:catalogue_number) }.compact.uniq
 
-      result[:latest_release_date] = release.latest_release_date
+      result[:latest_release_date] = release.release_formats(true).maximum(:release_date)
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
       result[:track_artists] = release.tracks.map {|t| t.artists.map(&:name) }.flatten.uniq
