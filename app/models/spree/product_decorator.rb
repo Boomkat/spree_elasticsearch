@@ -268,19 +268,19 @@ module Spree
             mode: :min,
             order: :asc,
             nested_filter: { and: nested }
-          }}, "_score" ]
+          }}, "_id" ]
         when "oldest"
           [ {"variants.release_date": {
             mode: :max,
             order: :asc,
             nested_filter: { and: nested }
-          }}, "_score" ]
+          }}, "_id" ]
         when "newest"
           [ {"variants.release_date": {
             mode: :max,
             order: :desc,
             nested_filter: { and: nested }
-          }}, "_score" ]
+          }}, "_id" ]
         else
           [ {"variants.in_stock": {
             mode: :max,
