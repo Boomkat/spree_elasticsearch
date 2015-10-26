@@ -109,8 +109,8 @@ module Spree
       attribute :release_date, String
       attribute :category, String
       attribute :sorting, String
-      attribute :product_reviews, Boolean
-      attribute :track_titles, Boolean
+      attribute :product_reviews, Boolean, default: false
+      attribute :track_titles, Boolean, default: false
 
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
       # When browse_mode is disabled, the taxon filter is placed inside the filtered query. This causes the facets to be limited to the resulting set.
@@ -305,13 +305,28 @@ module Spree
         # basic skeleton
         result = {
           min_score: 0.1,
-          query: { filtered: {} },
+          query: {
+            function_score: {
+              query: { filtered: { query: query } },
+              functions: [
+                { boost_factor: 1 },
+                { gauss: {
+                    "available_on": {
+                      scale: '365d'
+                    }
+                  }
+                }
+              ],
+              boost_mode: :multiply,
+              score_mode: :sum
+            }
+          },
           sort: sorting,
           aggs: aggs
         }
         # add query and filters to filtered
-        result[:query][:filtered][:query] = query
-        result[:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
+        #result[:query][:filtered][:query] = query
+        result[:query][:function_score][:query][:filtered][:filter] = { and: and_filter } unless and_filter.empty?
  
         puts result.to_json
         result
