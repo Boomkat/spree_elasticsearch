@@ -152,7 +152,7 @@ module Spree
           [['sku'], ['sku']]
         else
           [
-            ['artists^5', 'name^3', 'label^1', 'tracks', 'track_artists', 'sku'],
+            ['artists^5', 'name^3', 'label^1', 'track_artists', 'sku'],
             ['artists.lowercase^5', 'name.lowercase^3', 'label.lowercase^1', 'track_artists.lowercase']
           ]
           # TODO: re-enable description search
