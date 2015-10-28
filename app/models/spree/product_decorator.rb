@@ -309,8 +309,8 @@ module Spree
         result = {
           min_score: 0.1,
           query: nil,
-          sort: sorting,
-          aggs: aggs
+          sort: sorting
+          #aggs: aggs
         }
         # add query and filters to filtered
         filtered = { filtered: { query: query } }
