@@ -325,7 +325,7 @@ module Spree
               functions: [
                 { boost_factor: 1 },
                 { gauss: {
-                  "available_on": {
+                  "latest_release_date": {
                     scale: '365d'
                   }
                 }
