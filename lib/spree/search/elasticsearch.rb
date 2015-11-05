@@ -25,7 +25,7 @@ module Spree
         prepare(params)
       end
 
-      def retrieve_products
+      def retrieve_products(raw_query = nil)
         search_result = Spree::Product.__elasticsearch__.search(
           Spree::Product::ElasticsearchQuery.new(
             query: query,
@@ -37,7 +37,8 @@ module Spree
             status: status,
             sorting: sorting,
             product_reviews: product_reviews,
-            track_titles: track_titles
+            track_titles: track_titles,
+            raw: Array.wrap(raw_query)
           ).to_hash
         )
         @result = search_result.limit(per_page).page(page)

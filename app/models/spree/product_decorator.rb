@@ -115,6 +115,8 @@ module Spree
       attribute :product_reviews, Boolean, default: false
       attribute :track_titles, Boolean, default: false
 
+      attribute :raw, Array # for passing ES queries
+
       # When browse_mode is enabled, the taxon filter is placed at top level. This causes the results to be limited, but facetting is done on the complete dataset.
       # When browse_mode is disabled, the taxon filter is placed inside the filtered query. This causes the facets to be limited to the resulting set.
 
@@ -185,6 +187,9 @@ module Spree
 
         # taxon and property filters have an effect on the facets
         and_filter << { terms: { taxon_ids: taxons } } unless taxons.empty?
+
+        # append our raw queries (note, this is toplevel, not nested)
+        and_filter.concat raw unless raw.blank?
 
         # match uber_format
         release_format_filter = {
