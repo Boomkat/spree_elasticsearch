@@ -9,7 +9,6 @@ module Spree
       # search, autocomplete, untouched & exact match
       indexes :name, type: 'multi_field' do
         indexes :name,         type: 'string', analyzer: 'search_analyzer'
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
         indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
@@ -53,14 +52,12 @@ module Spree
       # artists
       indexes :artists, type: 'multi_field' do
         indexes :artists,      type: 'string', analyzer: 'search_analyzer'
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
         indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
       # label
       indexes :label, type: 'multi_field' do
         indexes :label,        type: 'string', analyzer: 'search_analyzer'
-        indexes :autocomplete, type: 'string', analyzer: 'ngram_analyzer'
         indexes :untouched,    type: 'string', include_in_all: false, index: 'not_analyzed'
         indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
