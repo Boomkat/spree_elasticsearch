@@ -5,7 +5,7 @@ module Spree
     index_name Spree::ElasticsearchSettings.index
     document_type 'spree_product'
 
-    mapping _all: {'index_analyzer' => 'search_analyzer', 'search_analyzer' => 'whitespace_analyzer'} do
+    mapping _all: {enabled: false} do
       # search, autocomplete, untouched & exact match
       indexes :name, type: 'multi_field' do
         indexes :name,         type: 'string', analyzer: 'search_analyzer'
@@ -72,14 +72,14 @@ module Spree
       })
       result[:artists] = artists.map(&:name)
       result[:genres] = release.genres.map(&:id)
-      result[:label] = label.try(:name) 
+      result[:label] = label.try(:name)
       result[:sku] = variants.map{|v|  v.definitive_release_format.try(:catalogue_number) }.compact.uniq
 
       result[:latest_release_date] = release.release_formats(true).maximum(:release_date)
       # Store names of all tracks, uniq'd to be able to search by track name
       result[:tracks] = track_products.map(&:name).uniq
       result[:track_artists] = release.tracks.map {|t| t.artists.map(&:name) }.flatten.uniq
-  
+
       # map variant data
       result[:variants] = variants.map do |v|
         h = v.as_json({
@@ -208,7 +208,7 @@ module Spree
           end
           nested << { terms: { 'variants.uber_format': uber_format } }
         end
-        
+
         # filter by status (limiting by uber format previously if needed
         unless status.empty? || status.include?('all')
           # filter by stock status
@@ -252,7 +252,7 @@ module Spree
         else
         end
         nested << { range: { 'variants.release_date': { gte: release_date_filter } } } if release_date_filter
- 
+
         # append the nested query
         and_filter << release_format_filter unless nested.empty?
 
@@ -319,7 +319,7 @@ module Spree
         filtered[:filtered][:filter] = { and: and_filter } unless and_filter.empty?
 
         # if we're sorting by score, add weighing by release date (newer
-        # releases show up higher) 
+        # releases show up higher)
         if sorting.include? "_score"
           result[:query] = {
             function_score: {
@@ -340,7 +340,7 @@ module Spree
         else # else just filter them
           result[:query] = filtered
         end
- 
+
         puts result.to_json
         result
       end
