@@ -45,6 +45,11 @@ module Spree
         indexes :can_preorder, type: 'boolean', index: 'not_analyzed'
         indexes :in_stock,     type: 'boolean', index: 'not_analyzed'
         indexes :published,    type: 'boolean', index: 'not_analyzed'
+
+        indexes :discount_type, type: 'string', index: 'not_analyzed'
+        indexes :discount_rule, type: 'string', index: 'not_analyzed'
+        indexes :discount_price, type: 'double'
+        indexes :discount_end_date, type: 'date', format: 'dateOptionalTime', include_in_all: false
       end
 
       # genres
@@ -86,10 +91,16 @@ module Spree
           only: [:id],
           methods: [:price, :format, :uber_format, :release_date]
         })
-        h[:sku] = v.definitive_release_format.try(:catalogue_number)
-        h[:can_preorder] = v.definitive_release_format.try(:can_pre_order) || false
+        rf = v.definitive_release_format
+        h[:sku] = rf.try(:catalogue_number)
+        h[:can_preorder] = rf.try(:can_pre_order) || false
         h[:published] = v.published?
         h[:in_stock] = v.suppliable?
+
+        h[:discount_reason]   = rf.try(:discount_reason)
+        h[:discount_rule]     = rf.try(:discount_rule)
+        h[:discount_price]    = rf.try(:discount_price)
+        h[:discount_end_date] = rf.try(:discount_end_date)
         h
       end
 
