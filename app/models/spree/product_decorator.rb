@@ -235,7 +235,7 @@ module Spree
           if status.include?('sale') # items in the sale taxon
             nested << {
               and: [
-                { term: { 'variants.discount_type': 'sale' } },
+                { term: { 'variants.discount_reason': 'sale' } },
                 { range: { 'variants.discount_end_date': { gte: 'now' } } }
               ]
             }
