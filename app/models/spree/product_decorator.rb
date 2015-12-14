@@ -233,7 +233,12 @@ module Spree
           end
 
           if status.include?('sale') # items in the sale taxon
-            and_filter << { term: { taxon_ids: BoomkatTaxon.sale.id } }
+            nested << {
+              and: [
+                { term: { 'variants.discount_type': 'sale' } },
+                { range: { 'variants.discount_end_date': { gte: 'now' } } }
+              ]
+            }
           end
           if status.include?('recommended')
             and_filter << { term: { taxon_ids: BoomkatTaxon.recommended.id } }
