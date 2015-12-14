@@ -146,7 +146,6 @@ module Spree
       #   }
       #   filter: { range: { price: { lte: , gte: } } },
       #   sort: [],
-      #   aggs:
       # }
       def to_hash
         q = { match_all: {} }
@@ -275,14 +274,6 @@ module Spree
         and_filter << { missing: { field: :deleted_at } }
         and_filter << { term: { published: true } }
 
-        # facets
-        aggs = {
-          artist:    { terms: { field: "artists", size: 0 } },
-          genre:     { terms: { field: "genres", size: 0 } },
-          label:     { terms: { field: "label", size: 0 } },
-          taxon_ids: { terms: { field: "taxon_ids", size: 0 } }
-        }
-
         sorting = case @sorting
         when "name_asc"
           [ {"name.untouched" => { order: "asc" }}, {price: { order: "asc" }}, "_score" ]
@@ -323,7 +314,6 @@ module Spree
           min_score: 0.1,
           query: nil,
           sort: sorting
-          #aggs: aggs
         }
         # add query and filters to filtered
         filtered = { filtered: { query: query } }
