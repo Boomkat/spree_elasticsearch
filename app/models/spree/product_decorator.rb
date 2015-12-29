@@ -236,7 +236,7 @@ module Spree
             nested << {
               and: [
                 { term: { 'variants.discount_reason': 'sale' } },
-                { range: { 'variants.discount_end_date': { gte: 'now' } } }
+                { range: { 'variants.discount_end_date': { gte: 'now+1d/d' } } } # "the current time plus one day, rounded down to the nearest day" - tomorrow
               ]
             }
           end
