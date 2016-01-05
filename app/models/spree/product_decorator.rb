@@ -13,7 +13,7 @@ module Spree
         indexes :lowercase,    type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       end
       indexes :description, analyzer: 'snowball'
-      indexes :sku, type: 'string', index: 'not_analyzed'
+      indexes :sku, type: 'string', analyzer: 'lowercase_analyzer', include_in_all: false
       indexes :taxon_ids, type: 'string', index: 'not_analyzed'
 
       indexes :available_on, type: 'date', format: 'dateOptionalTime', include_in_all: false
